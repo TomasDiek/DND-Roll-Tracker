@@ -1,0 +1,509 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+
+  font-family: Arial, Helvetica, sans-serif;
+
+  background: #111827;
+  color: #f9fafb;
+}
+
+.container {
+  max-width: 900px;
+
+  margin: 0 auto;
+
+  padding: 30px 20px;
+}
+
+header {
+  text-align: center;
+
+  margin-bottom: 30px;
+}
+
+header h1 {
+  margin-bottom: 5px;
+}
+
+header p {
+  color: #9ca3af;
+}
+
+.card {
+  background: #1f2937;
+
+  padding: 20px;
+
+  margin-bottom: 20px;
+
+  border-radius: 12px;
+}
+
+.card h2 {
+  margin-top: 0;
+}
+
+input,
+select {
+  width: 100%;
+
+  padding: 12px;
+
+  margin-bottom: 10px;
+
+  border: none;
+
+  border-radius: 8px;
+
+  font-size: 16px;
+}
+
+.player-create {
+  display: flex;
+
+  gap: 10px;
+}
+
+.player-create input {
+  margin-bottom: 0;
+}
+
+button {
+  border: none;
+
+  border-radius: 8px;
+
+  padding: 12px 18px;
+
+  font-size: 16px;
+
+  cursor: pointer;
+}
+
+.player-create button {
+  white-space: nowrap;
+}
+
+.roll-buttons {
+  display: grid;
+
+  grid-template-columns: repeat(3, 1fr);
+
+  gap: 10px;
+
+  margin-top: 15px;
+}
+
+.roll {
+  min-height: 90px;
+
+  font-size: 20px;
+
+  font-weight: bold;
+}
+
+.normal {
+  background: #e5e7eb;
+}
+
+.nat20 {
+  background: #22c55e;
+}
+
+.nat1 {
+  background: #ef4444;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 12px;
+
+  text-align: center;
+
+  border-bottom: 1px solid #374151;
+}
+
+th:first-child,
+td:first-child {
+  text-align: left;
+}
+
+#winner {
+  margin-bottom: 15px;
+
+  padding: 15px;
+
+  border-radius: 8px;
+
+  background: #374151;
+
+  font-weight: bold;
+
+  display: none;
+}
+
+.reset {
+  width: 100%;
+
+  background: #374151;
+
+  color: white;
+}
+
+@media (max-width: 600px) {
+  .roll-buttons {
+    grid-template-columns: 1fr;
+  }
+
+  .roll {
+    min-height: 70px;
+  }
+
+  .player-create {
+    flex-direction: column;
+  }
+}
+[hidden] {
+  display: none !important;
+}
+
+.divider {
+  text-align: center;
+  color: #9ca3af;
+
+  margin: 15px 0;
+
+  font-size: 13px;
+  font-weight: bold;
+}
+
+#sessionCodeInput {
+  text-transform: uppercase;
+
+  letter-spacing: 3px;
+
+  font-weight: bold;
+}
+
+#activeSessionCode {
+  font-size: 22px;
+
+  letter-spacing: 3px;
+}
+.playing-as {
+  margin: 0;
+
+  font-size: 18px;
+
+  text-align: center;
+}
+
+.playing-as strong {
+  font-size: 22px;
+}
+
+#hostPlayerControls {
+  margin-bottom: 15px;
+}
+
+#hostPlayerControls label {
+  display: block;
+
+  margin-bottom: 8px;
+
+  color: #9ca3af;
+}
+
+.undo-button {
+  width: 100%;
+
+  margin-top: 12px;
+
+  background: #374151;
+  color: white;
+}
+
+.undo-button:hover {
+  background: #4b5563;
+}
+
+.undo-button:disabled {
+  opacity: 0.4;
+
+  cursor: not-allowed;
+}
+.session-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.finish-button {
+  background: #f59e0b;
+  color: #111827;
+  font-weight: bold;
+}
+
+.finished-message {
+  padding: 18px;
+  margin-bottom: 15px;
+
+  background: #78350f;
+
+  border: 1px solid #f59e0b;
+  border-radius: 10px;
+
+  text-align: center;
+
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.status-active {
+  color: #22c55e;
+}
+
+.status-finished {
+  color: #f59e0b;
+}
+
+@media (max-width: 600px) {
+  .session-actions {
+    flex-direction: column;
+  }
+
+  .session-actions button {
+    width: 100%;
+  }
+}
+#campaignCodeInput {
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  font-weight: bold;
+}
+
+#activeCampaignCode {
+  font-size: 22px;
+  letter-spacing: 3px;
+}
+
+.campaign-name {
+  font-size: 22px;
+  margin-bottom: 8px;
+}
+
+#campaignPlayerSetup p {
+  color: #9ca3af;
+}
+
+#sessionPlayerHint {
+  color: #9ca3af;
+}
+.empty-message {
+  color: #9ca3af;
+  text-align: center;
+  padding: 20px;
+}
+
+.campaign-summary {
+  display: grid;
+
+  grid-template-columns: repeat(4, 1fr);
+
+  gap: 10px;
+
+  margin-bottom: 20px;
+}
+
+.summary-stat {
+  background: #374151;
+
+  border-radius: 10px;
+
+  padding: 15px;
+
+  text-align: center;
+}
+
+.summary-stat span {
+  display: block;
+
+  color: #9ca3af;
+
+  font-size: 13px;
+
+  margin-bottom: 5px;
+}
+
+.summary-stat strong {
+  font-size: 24px;
+}
+
+/* =====================================
+   HISTORY
+   ===================================== */
+
+.history-item {
+  background: #374151;
+
+  border-radius: 10px;
+
+  margin-bottom: 10px;
+
+  overflow: hidden;
+}
+
+.history-item summary {
+  cursor: pointer;
+
+  padding: 15px;
+
+  list-style: none;
+}
+
+.history-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.history-header {
+  display: flex;
+
+  justify-content: space-between;
+
+  gap: 15px;
+
+  align-items: center;
+}
+
+.history-title {
+  font-weight: bold;
+
+  font-size: 17px;
+}
+
+.history-date {
+  color: #9ca3af;
+
+  font-size: 13px;
+}
+
+.history-winner {
+  margin-top: 6px;
+
+  color: #fbbf24;
+}
+
+.history-details {
+  padding: 0 15px 15px 15px;
+}
+
+.history-details table {
+  margin-top: 10px;
+}
+
+@media (max-width: 600px) {
+  .campaign-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .history-header {
+    flex-direction: column;
+
+    align-items: flex-start;
+  }
+}
+.records-grid {
+  display: grid;
+
+  grid-template-columns: repeat(4, 1fr);
+
+  gap: 12px;
+}
+
+.record-card {
+  background: #374151;
+
+  border-radius: 12px;
+
+  padding: 18px;
+
+  text-align: center;
+}
+
+.record-icon {
+  font-size: 30px;
+
+  margin-bottom: 8px;
+}
+
+.record-label {
+  color: #9ca3af;
+
+  font-size: 13px;
+
+  margin-bottom: 8px;
+}
+
+.record-value {
+  font-size: 18px;
+
+  font-weight: bold;
+}
+
+.record-player {
+  display: block;
+
+  font-size: 18px;
+
+  margin-bottom: 4px;
+}
+
+.record-number {
+  color: #fbbf24;
+
+  font-size: 22px;
+}
+
+.record-session {
+  display: block;
+
+  color: #9ca3af;
+
+  font-size: 12px;
+
+  margin-top: 5px;
+}
+
+.record-note {
+  color: #6b7280;
+
+  font-size: 11px;
+
+  margin-top: 5px;
+}
+
+@media (max-width: 800px) {
+  .records-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 450px) {
+  .records-grid {
+    grid-template-columns: 1fr;
+  }
+}

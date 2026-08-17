@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>D&D Roll Tracker</title>
+
+    <link rel="stylesheet" href="style.css" />
+  </head>
+
+  <body>
+    <main class="container">
+      <header>
+        <h1>🎲 D&D Roll Tracker</h1>
+        <p>Track the luckiest and unluckiest adventurers.</p>
+      </header>
+      <!-- CAMPAIGN -->
+      <section class="card">
+        <h2>Campaign</h2>
+
+        <div id="campaignSetup">
+          <input id="campaignName" type="text" placeholder="Campaign name" />
+
+          <button id="createCampaignButton">Create Campaign</button>
+
+          <div class="divider">OR</div>
+
+          <input
+            id="campaignCodeInput"
+            type="text"
+            maxlength="6"
+            placeholder="Campaign code"
+          />
+
+          <button id="joinCampaignButton">Join Campaign</button>
+        </div>
+
+        <div id="activeCampaign" hidden>
+          <p class="campaign-name">
+            <strong id="activeCampaignName"></strong>
+          </p>
+
+          <p>
+            Campaign code:
+            <strong id="activeCampaignCode"></strong>
+          </p>
+
+          <button id="leaveCampaignButton">Leave Campaign</button>
+        </div>
+      </section>
+      <!-- CAMPAIGN PLAYER -->
+      <section id="campaignPlayerCard" class="card" hidden>
+        <div id="campaignPlayerSetup">
+          <h2>Who are you?</h2>
+
+          <p>Select your existing campaign player or create a new one.</p>
+
+          <select id="campaignPlayerSelect">
+            <option value="">Select player</option>
+          </select>
+
+          <button id="selectCampaignPlayerButton">Continue as Player</button>
+
+          <div class="divider">OR</div>
+
+          <div class="player-create">
+            <input
+              id="campaignPlayerName"
+              type="text"
+              placeholder="New player / character name"
+            />
+
+            <button id="saveCampaignPlayerButton">Create Player</button>
+          </div>
+        </div>
+
+        <div id="campaignPlayerInfo" hidden>
+          <p class="playing-as">
+            Campaign player:
+            <strong id="campaignPlayerDisplayName"></strong>
+          </p>
+
+          <button id="changeCampaignPlayerButton" class="secondary-button">
+            Change Player
+          </button>
+        </div>
+      </section>
+      <!-- ALL TIME STATS -->
+      <section id="allTimeCard" class="card" hidden>
+        <h2>🏆 All-Time Stats</h2>
+
+        <div id="allTimeEmpty" class="empty-message">
+          No finished sessions yet.
+        </div>
+
+        <div id="allTimeContent" hidden>
+          <div class="campaign-summary">
+            <div class="summary-stat">
+              <span>Sessions</span>
+              <strong id="campaignTotalSessions">0</strong>
+            </div>
+
+            <div class="summary-stat">
+              <span>Rolls</span>
+              <strong id="campaignTotalRolls">0</strong>
+            </div>
+
+            <div class="summary-stat">
+              <span>NAT20</span>
+              <strong id="campaignTotalNat20">0</strong>
+            </div>
+
+            <div class="summary-stat">
+              <span>NAT1</span>
+              <strong id="campaignTotalNat1">0</strong>
+            </div>
+          </div>
+
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Player</th>
+                  <th>Sessions</th>
+                  <th>Rolls</th>
+                  <th>NAT20</th>
+                  <th>NAT1</th>
+                  <th>Crit %</th>
+                  <th>Fail %</th>
+                  <th>Wins</th>
+                  <th>Ties</th>
+                </tr>
+              </thead>
+
+              <tbody id="allTimeBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+      <!-- CAMPAIGN RECORDS -->
+      <section id="recordsCard" class="card" hidden>
+        <h2>⚔️ Campaign Records</h2>
+
+        <div id="recordsEmpty" class="empty-message">
+          No finished sessions yet.
+        </div>
+
+        <div id="recordsGrid" class="records-grid" hidden>
+          <div class="record-card">
+            <div class="record-icon">🏆</div>
+            <div class="record-label">Most Session Wins</div>
+            <div id="recordMostWins" class="record-value"></div>
+          </div>
+
+          <div class="record-card">
+            <div class="record-icon">⭐</div>
+            <div class="record-label">Most NAT20 Overall</div>
+            <div id="recordMostNat20" class="record-value"></div>
+          </div>
+
+          <div class="record-card">
+            <div class="record-icon">💀</div>
+            <div class="record-label">Most NAT1 Overall</div>
+            <div id="recordMostNat1" class="record-value"></div>
+          </div>
+
+          <div class="record-card">
+            <div class="record-icon">🎲</div>
+            <div class="record-label">Most Rolls Overall</div>
+            <div id="recordMostRolls" class="record-value"></div>
+          </div>
+
+          <div class="record-card">
+            <div class="record-icon">🔥</div>
+            <div class="record-label">Most NAT20 in Session</div>
+            <div id="recordSessionNat20" class="record-value"></div>
+          </div>
+
+          <div class="record-card">
+            <div class="record-icon">☠️</div>
+            <div class="record-label">Most NAT1 in Session</div>
+            <div id="recordSessionNat1" class="record-value"></div>
+          </div>
+
+          <div class="record-card">
+            <div class="record-icon">🎲</div>
+            <div class="record-label">Most Rolls in Session</div>
+            <div id="recordSessionRolls" class="record-value"></div>
+          </div>
+
+          <div class="record-card">
+            <div class="record-icon">🎯</div>
+            <div class="record-label">Best Crit Rate</div>
+            <div id="recordBestCritRate" class="record-value"></div>
+
+            <div class="record-note">min. 20 rolls</div>
+          </div>
+        </div>
+      </section>
+      <!-- SESSION HISTORY -->
+      <section id="historyCard" class="card" hidden>
+        <h2>📜 Session History</h2>
+
+        <div id="historyEmpty" class="empty-message">
+          No finished sessions yet.
+        </div>
+
+        <div id="historyList"></div>
+      </section>
+      <!-- SESSION -->
+      <section id="sessionCard" class="card" hidden>
+        <h2>Session</h2>
+
+        <div id="sessionSetup">
+          <div id="createSessionArea">
+            <input id="sessionName" type="text" placeholder="Session name" />
+
+            <button id="createSessionButton">Create Session</button>
+          </div>
+
+          <div id="sessionJoinDivider" class="divider">OR</div>
+
+          <input
+            id="sessionCodeInput"
+            type="text"
+            maxlength="6"
+            placeholder="Session code"
+          />
+
+          <button id="joinSessionButton">Join Session</button>
+        </div>
+
+        <div id="activeSession" hidden>
+          <p id="activeSessionName"></p>
+
+          <p>
+            Session code:
+            <strong id="activeSessionCode"></strong>
+          </p>
+
+          <p>
+            Status:
+            <strong id="sessionStatus"></strong>
+          </p>
+
+          <div class="session-actions">
+            <button id="finishSessionButton" class="finish-button" hidden>
+              🏁 Finish Session
+            </button>
+
+            <button id="leaveSessionButton">Leave Session</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- PLAYER -->
+      <section id="playerCard" class="card" hidden>
+        <div id="playerRegistration">
+          <h2>Join Session</h2>
+
+          <p id="sessionPlayerHint"></p>
+
+          <button id="addPlayerButton">Join Session as Player</button>
+        </div>
+
+        <div id="myPlayerInfo" hidden>
+          <p class="playing-as">
+            You are:
+            <strong id="myPlayerName"></strong>
+          </p>
+        </div>
+      </section>
+
+      <!-- ROLLS -->
+      <section id="rollCard" class="card" hidden>
+        <h2 id="rollPlayerTitle">Rolls</h2>
+
+        <!-- Tik hostui -->
+        <div id="hostPlayerControls" hidden>
+          <label for="playerSelect"> Control player: </label>
+
+          <select id="playerSelect">
+            <option value="">Select player</option>
+          </select>
+        </div>
+
+        <div class="roll-buttons">
+          <button id="rollButton" class="roll normal">🎲 Roll</button>
+
+          <button id="nat20Button" class="roll nat20">⭐ NAT 20</button>
+
+          <button id="nat1Button" class="roll nat1">💀 NAT 1</button>
+        </div>
+
+        <button id="undoButton" class="undo-button">↩ Undo last roll</button>
+      </section>
+
+      <!-- LEADERBOARD -->
+      <section id="leaderboardCard" class="card" hidden>
+        <h2>Leaderboard</h2>
+        <div id="finishedMessage" class="finished-message" hidden></div>
+        <div id="winner"></div>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>Rolls</th>
+                <th>NAT20</th>
+                <th>NAT1</th>
+                <th>Score</th>
+                <th>Crit %</th>
+                <th>Fail %</th>
+              </tr>
+            </thead>
+
+            <tbody id="leaderboardBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
