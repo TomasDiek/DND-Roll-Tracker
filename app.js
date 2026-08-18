@@ -7,6 +7,9 @@ import {
   getAuth,
   signInAnonymously,
   onAuthStateChanged,
+  GoogleAuthProvider,
+  linkWithPopup,
+  signInWithPopup,
 } from "https://www.gstatic.com/firebasejs/12.17.1/firebase-auth.js";
 
 import {
@@ -248,6 +251,11 @@ const rollVisibilityTitle = document.getElementById("rollVisibilityTitle");
 const rollVisibilityDescription = document.getElementById(
   "rollVisibilityDescription",
 );
+const hostAccountArea = document.getElementById("hostAccountArea");
+
+const linkGoogleButton = document.getElementById("linkGoogleButton");
+
+const googleSignInButton = document.getElementById("googleSignInButton");
 // =====================================================
 // EVENTS
 // =====================================================
@@ -281,6 +289,9 @@ selectCampaignPlayerButton.addEventListener(
 );
 hideRollsCheckbox.addEventListener("change", updateRollVisibility);
 changeCampaignPlayerButton.addEventListener("click", changeCampaignPlayer);
+linkGoogleButton.addEventListener("click", linkHostToGoogle);
+
+googleSignInButton.addEventListener("click", signInHostWithGoogle);
 // =====================================================
 // AUTH
 // =====================================================
@@ -758,7 +769,7 @@ function render() {
   // =====================================
   // CAMPAIGN
   // =====================================
-
+  renderHostAccount();
   const hasCampaign = Boolean(activeCampaignCode && campaignData);
 
   campaignSetup.hidden = hasCampaign;
@@ -2500,6 +2511,106 @@ function renderRollVisibility() {
     rollVisibilityDescription.textContent =
       "Other players can see your results.";
   }
+}
+async function linkHostToGoogle() {
+  if (!currentUser) {
+    return;
+  }
+
+  if (!currentUser.isAnonymous) {
+    alert("Host account is already secured.");
+    return;
+  }
+
+  const provider = new GoogleAuthProvider();
+
+  try {
+    const result = await linkWithPopup(currentUser, provider);
+
+    currentUser = result.user;
+
+    console.log("Host linked to Google:", currentUser.uid);
+
+    alert(
+      "Host account secured. You can now use this campaign on another computer.",
+    );
+
+    render();
+  } catch (error) {
+    console.error("Google account linking error:", error);
+
+    alert("Could not link Google account.");
+  }
+}
+async function signInHostWithGoogle() {
+  const provider = new GoogleAuthProvider();
+
+  try {
+    const result = await signInWithPopup(auth, provider);
+
+    currentUser = result.user;
+
+    console.log("Signed in as host with Google:", currentUser.uid);
+
+    render();
+  } catch (error) {
+    console.error("Google host sign-in error:", error);
+
+    alert("Could not sign in with Google.");
+  }
+}
+function renderHostAccount() {
+  if (!currentUser) {
+    hostAccountArea.hidden = true;
+    return;
+  }
+
+  const isAnonymous = currentUser.isAnonymous;
+
+  const hasCampaign = Boolean(activeCampaignCode && campaignData);
+
+  const isCampaignHost =
+    hasCampaign && campaignData.createdBy === currentUser.uid;
+
+  // Jau prisijungta Google account'u.
+  if (!isAnonymous) {
+    hostAccountArea.hidden = true;
+    return;
+  }
+
+  hostAccountArea.hidden = false;
+
+  // =====================================
+  // NO CAMPAIGN
+  // =====================================
+  //
+  // Kitame PC galima pirmiausia
+  // prisijungti Google account'u.
+  //
+  if (!hasCampaign) {
+    linkGoogleButton.hidden = true;
+    googleSignInButton.hidden = false;
+
+    return;
+  }
+
+  // =====================================
+  // ORIGINAL ANONYMOUS HOST
+  // =====================================
+
+  if (isCampaignHost) {
+    linkGoogleButton.hidden = false;
+    googleSignInButton.hidden = true;
+
+    return;
+  }
+
+  // =====================================
+  // CAMPAIGN MEMBER / NEW COMPUTER
+  // =====================================
+
+  linkGoogleButton.hidden = true;
+  googleSignInButton.hidden = false;
 }
 // =====================================================
 // START

@@ -34,7 +34,7 @@
           <input
             id="campaignCodeInput"
             type="text"
-            maxlength="6"
+            maxlength="20"
             placeholder="Campaign code"
           />
 
@@ -52,6 +52,15 @@
           </p>
 
           <button id="leaveCampaignButton">Leave Campaign</button>
+        </div>
+        <div id="hostAccountArea" hidden>
+          <button id="linkGoogleButton" type="button">
+            🔐 Secure Host Account
+          </button>
+
+          <button id="googleSignInButton" type="button">
+            Sign in as Host with Google
+          </button>
         </div>
       </section>
       <!-- CAMPAIGN PLAYER -->
@@ -231,7 +240,7 @@
           <input
             id="sessionCodeInput"
             type="text"
-            maxlength="6"
+            maxlength="20"
             placeholder="Session code"
           />
 

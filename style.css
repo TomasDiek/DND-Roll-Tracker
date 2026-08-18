@@ -796,3 +796,11 @@ html.extension-mode h2 {
 html.extension-mode h3 {
   font-size: 16px;
 }
+#hostAccountArea:not([hidden]) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  margin-top: 12px;
+}
