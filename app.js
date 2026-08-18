@@ -23,7 +23,12 @@ import {
 // =====================================================
 // FIREBASE CONFIG
 // =====================================================
+const isExtensionMode =
+  new URLSearchParams(window.location.search).get("mode") === "extension";
 
+if (isExtensionMode) {
+  document.documentElement.classList.add("extension-mode");
+}
 const firebaseConfig = {
   apiKey: "AIzaSyAAXfSK5HeH0iut4Kda_vcWaDw06p00XDg",
   authDomain: "dnd-roll-tracker.firebaseapp.com",
@@ -40,6 +45,14 @@ const firebaseConfig = {
 // =====================================================
 
 const app = initializeApp(firebaseConfig);
+const isLocalDevelopment =
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1";
+if (isLocalDevelopment) {
+  self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+
+  console.log("Firebase App Check: LOCAL DEBUG MODE");
+}
 const appCheck = initializeAppCheck(app, {
   provider: new ReCaptchaEnterpriseProvider(
     "6Lf_mIotAAAAAP-EfSrh3d-lEA_oxWI2kttcxD-M",
@@ -212,6 +225,12 @@ const recordSessionRolls = document.getElementById("recordSessionRolls");
 
 const recordBestCritRate = document.getElementById("recordBestCritRate");
 const campaignPlayerSelect = document.getElementById("campaignPlayerSelect");
+const hostCreatePlayerArea = document.getElementById("hostCreatePlayerArea");
+const activeSessionsArea = document.getElementById("activeSessionsArea");
+
+const activeSessionsEmpty = document.getElementById("activeSessionsEmpty");
+
+const activeSessionsList = document.getElementById("activeSessionsList");
 
 const selectCampaignPlayerButton = document.getElementById(
   "selectCampaignPlayerButton",
@@ -219,6 +238,15 @@ const selectCampaignPlayerButton = document.getElementById(
 
 const changeCampaignPlayerButton = document.getElementById(
   "changeCampaignPlayerButton",
+);
+const customCampaignCodeInput = document.getElementById("customCampaignCode");
+const hideRollsArea = document.getElementById("hideRollsArea");
+
+const hideRollsCheckbox = document.getElementById("hideRollsCheckbox");
+const rollVisibilityTitle = document.getElementById("rollVisibilityTitle");
+
+const rollVisibilityDescription = document.getElementById(
+  "rollVisibilityDescription",
 );
 // =====================================================
 // EVENTS
@@ -251,7 +279,7 @@ selectCampaignPlayerButton.addEventListener(
   "click",
   selectExistingCampaignPlayer,
 );
-
+hideRollsCheckbox.addEventListener("change", updateRollVisibility);
 changeCampaignPlayerButton.addEventListener("click", changeCampaignPlayer);
 // =====================================================
 // AUTH
@@ -392,22 +420,34 @@ async function createSession() {
 // =====================================================
 
 async function joinSession() {
+  const code = sessionCodeInput.value.trim().toUpperCase();
+
+  if (!code) {
+    alert("Enter session code.");
+    return;
+  }
+
+  await joinSessionByCode(code);
+}
+async function joinSessionByCode(code) {
   try {
-    const code = sessionCodeInput.value.trim().toUpperCase();
-
-    if (!code) {
-      alert("Enter session code.");
-      return;
-    }
-
     const sessionSnapshot = await get(ref(db, `sessions/${code}`));
+
     if (!sessionSnapshot.exists()) {
       alert("Session not found.");
       return;
     }
+
     const joiningSession = sessionSnapshot.val();
+
     if (joiningSession.campaignCode !== activeCampaignCode) {
       alert("This session belongs to another campaign.");
+
+      return;
+    }
+
+    if (joiningSession.status !== "active") {
+      alert("This session is already finished.");
 
       return;
     }
@@ -419,7 +459,6 @@ async function joinSession() {
     alert("Could not join session.");
   }
 }
-
 // =====================================================
 // CONNECT TO SESSION
 // =====================================================
@@ -527,6 +566,8 @@ async function addPlayer() {
         nat20: 0,
 
         nat1: 0,
+
+        hideRolls: false,
       },
     );
 
@@ -757,6 +798,7 @@ function render() {
   sessionJoinDivider.hidden = !isCampaignHost;
 
   renderCampaignPlayer();
+  renderActiveSessions();
   allTimeCard.hidden = false;
 
   recordsCard.hidden = false;
@@ -780,7 +822,11 @@ function render() {
   activeSession.hidden = !hasSession;
 
   leaderboardCard.hidden = !hasSession;
+  activeSessionsArea.hidden = hasSession;
 
+  if (!hasSession) {
+    renderActiveSessions();
+  }
   if (!hasSession) {
     playerCard.hidden = true;
 
@@ -820,6 +866,7 @@ function render() {
   renderWinner();
 
   renderCampaignPlayer();
+  renderRollVisibility();
 }
 
 // =====================================================
@@ -832,7 +879,12 @@ function renderPlayerSelect() {
   const isHost = sessionData.createdBy === currentUser.uid;
 
   const myPlayer = getMyPlayerEntry();
-
+  if (myPlayer && sessionData.status === "active") {
+    hideRollsArea.hidden = false;
+    hideRollsCheckbox.checked = myPlayer.player.hideRolls === true;
+  } else {
+    hideRollsArea.hidden = true;
+  }
   // =====================================
   // MY PLAYER
   // =====================================
@@ -901,31 +953,77 @@ function renderPlayerSelect() {
 function renderLeaderboard() {
   leaderboardBody.innerHTML = "";
 
-  const players = Object.values(sessionData.players || {});
+  const playerEntries = Object.entries(sessionData.players || {});
 
-  const sortedPlayers = [...players].sort(comparePlayers);
+  playerEntries.sort((a, b) => {
+    const [idA, playerA] = a;
+    const [idB, playerB] = b;
 
-  sortedPlayers.forEach((player) => {
+    const visibleA = canSeePlayerRolls(idA, playerA);
+
+    const visibleB = canSeePlayerRolls(idB, playerB);
+
+    // Hidden playerio pozicija neturi
+    // išduoti jo rezultato.
+    if (visibleA && !visibleB) {
+      return -1;
+    }
+
+    if (!visibleA && visibleB) {
+      return 1;
+    }
+
+    if (!visibleA && !visibleB) {
+      return playerA.name.localeCompare(playerB.name);
+    }
+
+    return comparePlayers(playerA, playerB);
+  });
+
+  playerEntries.forEach(([playerId, player]) => {
     const row = document.createElement("tr");
 
-    const critRate =
-      player.rolls > 0
-        ? ((player.nat20 / player.rolls) * 100).toFixed(2)
-        : "0.00";
-    const failRate =
-      player.rolls > 0
-        ? ((player.nat1 / player.rolls) * 100).toFixed(2)
-        : "0.00";
-    const score = (player.nat20 || 0) - (player.nat1 || 0);
+    const canSee = canSeePlayerRolls(playerId, player);
+
+    if (!canSee) {
+      row.innerHTML = `
+          <td>
+            ${escapeHtml(player.name)} 🔒
+          </td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+        `;
+
+      leaderboardBody.appendChild(row);
+
+      return;
+    }
+
+    const rolls = player.rolls || 0;
+
+    const nat20 = player.nat20 || 0;
+
+    const nat1 = player.nat1 || 0;
+
+    const score = nat20 - nat1;
+
+    const critRate = rolls > 0 ? ((nat20 / rolls) * 100).toFixed(2) : "0.00";
+
+    const failRate = rolls > 0 ? ((nat1 / rolls) * 100).toFixed(2) : "0.00";
+
     row.innerHTML = `
-  <td>${escapeHtml(player.name)}</td>
-  <td>${player.rolls || 0}</td>
-  <td>${player.nat20 || 0}</td>
-  <td>${player.nat1 || 0}</td>
-  <td>  ${score > 0 ? "+" : ""}${score}</td>
-  <td>${critRate}%</td>
-  <td>${failRate}%</td>
-`;
+        <td>${escapeHtml(player.name)}</td>
+        <td>${rolls}</td>
+        <td>${nat20}</td>
+        <td>${nat1}</td>
+        <td>${score > 0 ? "+" : ""}${score}</td>
+        <td>${critRate}%</td>
+        <td>${failRate}%</td>
+      `;
 
     leaderboardBody.appendChild(row);
   });
@@ -1055,7 +1153,17 @@ function renderWinner() {
   // ACTIVE SESSION
   // =====================================
 
-  const sortedPlayers = [...playerValues].sort(comparePlayers);
+  const visiblePlayers = Object.entries(players)
+    .filter(([playerId, player]) => canSeePlayerRolls(playerId, player))
+    .map(([, player]) => player);
+
+  if (visiblePlayers.length === 0) {
+    winnerElement.textContent = "No visible rolls yet";
+
+    return;
+  }
+
+  const sortedPlayers = [...visiblePlayers].sort(comparePlayers);
 
   const leader = sortedPlayers[0];
 
@@ -1314,32 +1422,68 @@ async function createCampaign() {
 
   const campaignName = campaignNameInput.value.trim() || "D&D Campaign";
 
+  // Optional custom code
+  const requestedCode = customCampaignCodeInput.value.trim().toUpperCase();
+
   let code;
 
-  let available = false;
-
   try {
-    while (!available) {
-      code = generateCampaignCode();
+    // =====================================
+    // CUSTOM CODE
+    // =====================================
 
-      const snapshot = await get(ref(db, `campaigns/${code}`));
+    if (requestedCode) {
+      if (!/^[A-Z0-9_-]{3,20}$/.test(requestedCode)) {
+        alert(
+          "Campaign code must contain only letters, numbers, - or _ and be 3-20 characters long.",
+        );
 
-      available = !snapshot.exists();
+        return;
+      }
+
+      const snapshot = await get(ref(db, `campaigns/${requestedCode}`));
+
+      if (snapshot.exists()) {
+        alert("This campaign code is already in use.");
+
+        return;
+      }
+
+      code = requestedCode;
     }
 
-    await set(
-      ref(db, `campaigns/${code}`),
+    // =====================================
+    // GENERATED CODE
+    // =====================================
+    else {
+      let available = false;
 
-      {
-        name: campaignName,
+      while (!available) {
+        code = generateCampaignCode();
 
-        createdBy: currentUser.uid,
+        const snapshot = await get(ref(db, `campaigns/${code}`));
 
-        createdAt: Date.now(),
+        available = !snapshot.exists();
+      }
+    }
 
-        status: "active",
-      },
-    );
+    // =====================================
+    // CREATE
+    // =====================================
+
+    await set(ref(db, `campaigns/${code}`), {
+      name: campaignName,
+
+      createdBy: currentUser.uid,
+
+      createdAt: Date.now(),
+
+      status: "active",
+    });
+
+    campaignNameInput.value = "";
+
+    customCampaignCodeInput.value = "";
 
     connectToCampaign(code);
   } catch (error) {
@@ -1431,7 +1575,13 @@ async function saveCampaignPlayerProfile() {
   if (!activeCampaignCode) {
     return;
   }
+  const isCampaignHost = campaignData?.createdBy === currentUser.uid;
 
+  if (!isCampaignHost) {
+    alert("Only the campaign host can add players.");
+
+    return;
+  }
   const name = campaignPlayerNameInput.value.trim();
 
   if (!name) {
@@ -1462,13 +1612,8 @@ async function saveCampaignPlayerProfile() {
     const campaignPlayerId = newMemberRef.key;
 
     await set(newMemberRef, {
-      name: name,
-
+      name,
       joinedAt: Date.now(),
-
-      linkedUids: {
-        [currentUser.uid]: true,
-      },
     });
 
     setMyCampaignPlayerId(campaignPlayerId);
@@ -1570,7 +1715,9 @@ function renderCampaignPlayer() {
   const campaignPlayerEntry = getMyCampaignPlayerEntry();
 
   const members = campaignData?.members || {};
+  const isCampaignHost = campaignData?.createdBy === currentUser.uid;
 
+  hostCreatePlayerArea.hidden = !isCampaignHost;
   // =====================================
   // PLAYER SELECT
   // =====================================
@@ -2211,6 +2358,148 @@ function renderCampaignRecords() {
   renderSessionRecord(recordSessionRolls, records.sessionRolls, "rolls");
 
   renderCritRateRecord(recordBestCritRate, records.bestCritRate);
+}
+async function updateRollVisibility() {
+  const myPlayer = getMyPlayerEntry();
+
+  if (!myPlayer || sessionData?.status !== "active") {
+    return;
+  }
+
+  try {
+    await set(
+      ref(db, `sessions/${activeSessionCode}/players/${myPlayer.id}/hideRolls`),
+      hideRollsCheckbox.checked,
+    );
+  } catch (error) {
+    console.error("Hide rolls error:", error);
+
+    alert("Could not change roll visibility.");
+  }
+}
+function canSeePlayerRolls(playerId, player) {
+  // Po session finish viskas vieša.
+  if (sessionData?.status === "finished") {
+    return true;
+  }
+
+  // Jei playeris neslepia.
+  if (player.hideRolls !== true) {
+    return true;
+  }
+
+  // Hostas mato viską.
+  const isHost = sessionData?.createdBy === currentUser.uid;
+
+  if (isHost) {
+    return true;
+  }
+
+  // Playeris mato savo rollus.
+  const myPlayer = getMyPlayerEntry();
+
+  return myPlayer?.id === playerId;
+}
+function renderActiveSessions() {
+  const sessions = campaignData?.sessions || {};
+
+  const activeSessions = Object.entries(sessions)
+    .filter(([, session]) => session.status === "active")
+    .sort((a, b) => (b[1].createdAt || 0) - (a[1].createdAt || 0));
+
+  activeSessionsList.innerHTML = "";
+
+  activeSessionsEmpty.hidden = activeSessions.length > 0;
+
+  if (activeSessions.length === 0) {
+    activeSessionsEmpty.textContent = "No active sessions right now.";
+
+    return;
+  }
+
+  activeSessions.forEach(([sessionCode, session]) => {
+    const item = document.createElement("div");
+
+    item.className = "active-session-card";
+
+    const isCurrent = sessionCode === activeSessionCode;
+
+    const createdAtText = session.createdAt
+      ? new Date(session.createdAt).toLocaleString()
+      : "";
+
+    item.innerHTML = `
+        <div class="active-session-main">
+          <div class="active-session-top">
+            <h4 class="active-session-name">
+              ${escapeHtml(session.name || "D&D Session")}
+            </h4>
+
+            <span class="active-session-badge">
+              ACTIVE
+            </span>
+          </div>
+
+          <div class="active-session-meta">
+            <span class="session-code-pill">
+              ${escapeHtml(sessionCode)}
+            </span>
+
+            ${
+              createdAtText
+                ? `<span class="active-session-created">
+                    Created: ${escapeHtml(createdAtText)}
+                  </span>`
+                : ""
+            }
+          </div>
+        </div>
+
+        <div class="active-session-actions">
+          <button
+            class="join-active-session-button"
+            ${isCurrent ? "disabled" : ""}
+          >
+            ${isCurrent ? "Current" : "Join"}
+          </button>
+        </div>
+      `;
+
+    const button = item.querySelector(".join-active-session-button");
+
+    if (!isCurrent) {
+      button.addEventListener("click", () => joinSessionByCode(sessionCode));
+    }
+
+    activeSessionsList.appendChild(item);
+  });
+}
+function renderRollVisibility() {
+  const myPlayer = getMyPlayerEntry();
+
+  if (!myPlayer || sessionData?.status !== "active") {
+    hideRollsArea.hidden = true;
+
+    return;
+  }
+
+  hideRollsArea.hidden = false;
+
+  const hidden = myPlayer.player.hideRolls === true;
+
+  hideRollsCheckbox.checked = hidden;
+
+  if (hidden) {
+    rollVisibilityTitle.textContent = "🔒 Rolls hidden";
+
+    rollVisibilityDescription.textContent =
+      "Other players cannot see your results until the session ends.";
+  } else {
+    rollVisibilityTitle.textContent = "Rolls visible";
+
+    rollVisibilityDescription.textContent =
+      "Other players can see your results.";
+  }
 }
 // =====================================================
 // START

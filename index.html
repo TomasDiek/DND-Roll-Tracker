@@ -21,7 +21,12 @@
 
         <div id="campaignSetup">
           <input id="campaignName" type="text" placeholder="Campaign name" />
-
+          <input
+            id="customCampaignCode"
+            type="text"
+            maxlength="20"
+            placeholder="Custom code (optional)"
+          />
           <button id="createCampaignButton">Create Campaign</button>
 
           <div class="divider">OR</div>
@@ -62,16 +67,18 @@
 
           <button id="selectCampaignPlayerButton">Continue as Player</button>
 
-          <div class="divider">OR</div>
+          <div id="hostCreatePlayerArea" hidden>
+            <div class="divider">HOST</div>
 
-          <div class="player-create">
-            <input
-              id="campaignPlayerName"
-              type="text"
-              placeholder="New player / character name"
-            />
+            <div class="player-create">
+              <input
+                id="campaignPlayerName"
+                type="text"
+                placeholder="New player name"
+              />
 
-            <button id="saveCampaignPlayerButton">Create Player</button>
+              <button id="saveCampaignPlayerButton">Add Player</button>
+            </div>
           </div>
         </div>
 
@@ -230,7 +237,14 @@
 
           <button id="joinSessionButton">Join Session</button>
         </div>
+        <div id="activeSessionsArea">
+          <h3>🔥 Active Sessions</h3>
+          <p class="section-hint">Jump into any currently running session.</p>
 
+          <p id="activeSessionsEmpty">No active sessions.</p>
+
+          <div id="activeSessionsList"></div>
+        </div>
         <div id="activeSession" hidden>
           <p id="activeSessionName"></p>
 
@@ -269,6 +283,21 @@
             You are:
             <strong id="myPlayerName"></strong>
           </p>
+        </div>
+        <div id="hideRollsArea" class="roll-visibility" hidden>
+          <div class="roll-visibility-text">
+            <strong id="rollVisibilityTitle"> Rolls visible </strong>
+
+            <span id="rollVisibilityDescription">
+              Other players can see your results.
+            </span>
+          </div>
+
+          <label class="switch">
+            <input id="hideRollsCheckbox" type="checkbox" />
+
+            <span class="slider"></span>
+          </label>
         </div>
       </section>
 
