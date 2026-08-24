@@ -256,6 +256,15 @@ const hostAccountArea = document.getElementById("hostAccountArea");
 const linkGoogleButton = document.getElementById("linkGoogleButton");
 
 const googleSignInButton = document.getElementById("googleSignInButton");
+const exportCampaignButton = document.getElementById("exportCampaignButton");
+const extensionToolbar = document.getElementById("extensionToolbar");
+
+const quickModeButton = document.getElementById("quickModeButton");
+const achievementToastContainer = document.getElementById(
+  "achievementToastContainer",
+);
+let quickModeEnabled = localStorage.getItem("dndQuickMode") === "true";
+
 // =====================================================
 // EVENTS
 // =====================================================
@@ -292,6 +301,9 @@ changeCampaignPlayerButton.addEventListener("click", changeCampaignPlayer);
 linkGoogleButton.addEventListener("click", linkHostToGoogle);
 
 googleSignInButton.addEventListener("click", signInHostWithGoogle);
+exportCampaignButton.addEventListener("click", exportCampaignBackup);
+document.addEventListener("keydown", handleTrackerShortcut);
+quickModeButton.addEventListener("click", toggleQuickMode);
 // =====================================================
 // AUTH
 // =====================================================
@@ -627,14 +639,14 @@ function getControlledPlayerId() {
 
 async function addRoll(type) {
   const playerId = getControlledPlayerId();
+
   if (sessionData?.status !== "active") {
     alert("This session is already finished.");
-
     return;
   }
+
   if (!playerId) {
     alert("No player selected.");
-
     return;
   }
 
@@ -643,44 +655,97 @@ async function addRoll(type) {
     `sessions/${activeSessionCode}/players/${playerId}`,
   );
 
+  const beforeAchievements = {
+    ...(sessionData?.players?.[playerId]?.achievements || {}),
+  };
+
   try {
-    await runTransaction(
-      playerRef,
-
-      (player) => {
-        if (!player) {
-          return player;
-        }
-
-        player.rolls = (player.rolls || 0) + 1;
-
-        if (type === "nat20") {
-          player.nat20 = (player.nat20 || 0) + 1;
-        }
-
-        if (type === "nat1") {
-          player.nat1 = (player.nat1 || 0) + 1;
-        }
-
-        // ----------------------------
-        // ROLL HISTORY
-        // ----------------------------
-
-        if (!Array.isArray(player.rollHistory)) {
-          player.rollHistory = [];
-        }
-
-        player.rollHistory.push(type);
-
-        // Nereikia saugoti
-        // begalinės istorijos.
-        if (player.rollHistory.length > 20) {
-          player.rollHistory.shift();
-        }
-
+    const result = await runTransaction(playerRef, (player) => {
+      if (!player) {
         return player;
-      },
-    );
+      }
+
+      player.rolls = (player.rolls || 0) + 1;
+
+      if (type === "nat20") {
+        player.nat20 = (player.nat20 || 0) + 1;
+      }
+
+      if (type === "nat1") {
+        player.nat1 = (player.nat1 || 0) + 1;
+      }
+
+      if (!Array.isArray(player.rollHistory)) {
+        player.rollHistory = [];
+      }
+
+      player.rollHistory.push(type);
+
+      if (player.rollHistory.length > 20) {
+        player.rollHistory.shift();
+      }
+
+      if (!player.achievements) {
+        player.achievements = {};
+      }
+
+      if (player.nat20 >= 1) {
+        player.achievements.firstNat20 = true;
+      }
+
+      if (player.nat1 >= 3) {
+        player.achievements.cursed = true;
+      }
+
+      if (player.nat20 >= 5) {
+        player.achievements.blessed = true;
+      }
+
+      if (player.rolls >= 100) {
+        player.achievements.diceGoblin = true;
+      }
+
+      return player;
+    });
+
+    if (!result.committed) {
+      return;
+    }
+
+    const updatedPlayer = result.snapshot.val();
+    const after = updatedPlayer.achievements || {};
+
+    if (after.firstNat20 && !beforeAchievements.firstNat20) {
+      showAchievementToast(
+        "⭐",
+        "First Blood",
+        `${updatedPlayer.name} rolled their first NAT20!`,
+      );
+    }
+
+    if (after.cursed && !beforeAchievements.cursed) {
+      showAchievementToast(
+        "💀",
+        "Cursed",
+        `${updatedPlayer.name} reached 3 NAT1 this session.`,
+      );
+    }
+
+    if (after.blessed && !beforeAchievements.blessed) {
+      showAchievementToast(
+        "🔥",
+        "Blessed by the Dice Gods",
+        `${updatedPlayer.name} reached 5 NAT20 this session.`,
+      );
+    }
+
+    if (after.diceGoblin && !beforeAchievements.diceGoblin) {
+      showAchievementToast(
+        "🎲",
+        "Dice Goblin",
+        `${updatedPlayer.name} made 100 rolls this session.`,
+      );
+    }
   } catch (error) {
     console.error("Roll error:", error);
 
@@ -770,6 +835,7 @@ function render() {
   // CAMPAIGN
   // =====================================
   renderHostAccount();
+  applyQuickMode();
   const hasCampaign = Boolean(activeCampaignCode && campaignData);
 
   campaignSetup.hidden = hasCampaign;
@@ -803,6 +869,7 @@ function render() {
   activeCampaignCodeElement.textContent = activeCampaignCode;
 
   const isCampaignHost = campaignData.createdBy === currentUser.uid;
+  exportCampaignButton.hidden = !isCampaignHost;
 
   createSessionArea.hidden = !isCampaignHost;
 
@@ -2611,6 +2678,187 @@ function renderHostAccount() {
 
   linkGoogleButton.hidden = true;
   googleSignInButton.hidden = false;
+}
+async function exportCampaignBackup() {
+  if (!activeCampaignCode || !campaignData) {
+    return;
+  }
+
+  const isHost = campaignData.createdBy === currentUser.uid;
+
+  if (!isHost) {
+    alert("Only the campaign host can export a backup.");
+
+    return;
+  }
+
+  try {
+    const sessionCodes = Object.keys(campaignData.sessions || {});
+
+    const fullSessions = {};
+
+    for (const sessionCode of sessionCodes) {
+      const snapshot = await get(ref(db, `sessions/${sessionCode}`));
+
+      if (snapshot.exists()) {
+        fullSessions[sessionCode] = snapshot.val();
+      }
+    }
+
+    const backup = {
+      formatVersion: 1,
+
+      exportedAt: Date.now(),
+
+      campaignCode: activeCampaignCode,
+
+      campaign: campaignData,
+
+      sessions: fullSessions,
+    };
+
+    const json = JSON.stringify(backup, null, 2);
+
+    const blob = new Blob([json], {
+      type: "application/json",
+    });
+
+    const url = URL.createObjectURL(blob);
+
+    const date = new Date().toISOString().slice(0, 10);
+
+    const link = document.createElement("a");
+
+    link.href = url;
+
+    link.download = `DND-${activeCampaignCode}-backup-${date}.json`;
+
+    document.body.appendChild(link);
+
+    link.click();
+    link.remove();
+
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Campaign backup error:", error);
+
+    alert("Could not export campaign backup.");
+  }
+}
+function handleTrackerShortcut(event) {
+  // Tik Side Panel režime.
+  if (!isExtensionMode) {
+    return;
+  }
+
+  if (event.repeat) {
+    return;
+  }
+
+  // Jei vartotojas kažką rašo,
+  // shortcuts neveikia.
+  const activeElement = document.activeElement;
+
+  const tag = activeElement?.tagName;
+
+  if (
+    tag === "INPUT" ||
+    tag === "TEXTAREA" ||
+    tag === "SELECT" ||
+    activeElement?.isContentEditable
+  ) {
+    return;
+  }
+
+  const key = event.key.toLowerCase();
+
+  if (key === "q") {
+    event.preventDefault();
+
+    toggleQuickMode();
+
+    return;
+  }
+
+  // Likusiems reikia
+  // aktyvios session.
+  if (!activeSessionCode || sessionData?.status !== "active") {
+    return;
+  }
+
+  switch (key) {
+    case "r":
+      event.preventDefault();
+
+      addRoll("normal");
+
+      break;
+
+    case "2":
+      event.preventDefault();
+
+      addRoll("nat20");
+
+      break;
+
+    case "1":
+      event.preventDefault();
+
+      addRoll("nat1");
+
+      break;
+
+    case "u":
+      event.preventDefault();
+
+      undoLastRoll();
+
+      break;
+  }
+}
+function toggleQuickMode() {
+  quickModeEnabled = !quickModeEnabled;
+
+  localStorage.setItem("dndQuickMode", String(quickModeEnabled));
+
+  applyQuickMode();
+}
+
+function applyQuickMode() {
+  const hasSession = Boolean(
+    activeCampaignCode && campaignData && activeSessionCode && sessionData,
+  );
+
+  const enabled = isExtensionMode && quickModeEnabled && hasSession;
+
+  document.documentElement.classList.toggle("quick-mode", enabled);
+
+  extensionToolbar.hidden = !isExtensionMode || !hasSession;
+
+  quickModeButton.textContent = enabled ? "↩ Full View" : "⚡ Quick Mode";
+}
+function showAchievementToast(icon, title, description) {
+  const toast = document.createElement("div");
+
+  toast.className = "achievement-toast";
+
+  toast.innerHTML = `
+    <div class="achievement-toast-title">
+      ${icon} Achievement Unlocked
+    </div>
+
+    <strong>
+      ${escapeHtml(title)}
+    </strong>
+
+    <div class="achievement-toast-description">
+      ${escapeHtml(description)}
+    </div>
+  `;
+
+  achievementToastContainer.appendChild(toast);
+
+  setTimeout(() => toast.remove(), 5000);
 }
 // =====================================================
 // START

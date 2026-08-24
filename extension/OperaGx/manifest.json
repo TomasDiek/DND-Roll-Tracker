@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+
+  "name": "D&D Roll Tracker - Opera",
+  "version": "0.1.0",
+
+  "description": "D&D Roll Tracker for the Opera GX sidebar.",
+
+  "icons": {
+    "128": "icon.png"
+  },
+
+  "host_permissions": ["https://tomasdiek.github.io/*"],
+
+  "sidebar_action": {
+    "default_icon": "icon.png",
+    "default_title": "D&D Roll Tracker",
+    "default_panel": "panel.html"
+  },
+
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; frame-src https://tomasdiek.github.io;"
+  }
+}

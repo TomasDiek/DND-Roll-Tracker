@@ -15,8 +15,12 @@
         <h1>🎲 D&D Roll Tracker</h1>
         <p>Track the luckiest and unluckiest adventurers.</p>
       </header>
+      <div id="extensionToolbar" class="extension-toolbar" hidden>
+        <button id="quickModeButton" type="button">⚡ Quick Mode</button>
+      </div>
+
       <!-- CAMPAIGN -->
-      <section class="card">
+      <section id="campaignCard" class="card">
         <h2>Campaign</h2>
 
         <div id="campaignSetup">
@@ -40,7 +44,6 @@
 
           <button id="joinCampaignButton">Join Campaign</button>
         </div>
-
         <div id="activeCampaign" hidden>
           <p class="campaign-name">
             <strong id="activeCampaignName"></strong>
@@ -50,7 +53,14 @@
             Campaign code:
             <strong id="activeCampaignCode"></strong>
           </p>
-
+          <button
+            id="exportCampaignButton"
+            class="secondary-button"
+            type="button"
+            hidden
+          >
+            💾 Export Backup
+          </button>
           <button id="leaveCampaignButton">Leave Campaign</button>
         </div>
         <div id="hostAccountArea" hidden>
@@ -240,7 +250,7 @@
           <input
             id="sessionCodeInput"
             type="text"
-            maxlength="20"
+            maxlength="6"
             placeholder="Session code"
           />
 
@@ -359,7 +369,10 @@
         </div>
       </section>
     </main>
-
+    <div
+      id="achievementToastContainer"
+      class="achievement-toast-container"
+    ></div>
     <script type="module" src="app.js"></script>
   </body>
 </html>
