@@ -124,4 +124,20 @@ function processDiceAction(action) {
     total: action.TOTAL,
     trackerRolls,
   });
+  chrome.runtime
+    .sendMessage({
+      type: "DDB_ROLL_DETECTED",
+
+      roll: {
+        rollId: action.ROLL_ID,
+        action: action.ACTION || "",
+        rollType: action.TYPE || "",
+        d20Results: trackerRolls.map((roll) => roll.value),
+        total: action.TOTAL ?? null,
+      },
+    })
+    .catch(() => {
+      // Side Panel gali būti uždarytas.
+      // Tokiu atveju kol kas nieko nedarome.
+    });
 }

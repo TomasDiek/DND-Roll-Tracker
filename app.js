@@ -273,8 +273,25 @@ const quickNat20 = document.getElementById("quickNat20");
 const quickNat1 = document.getElementById("quickNat1");
 
 const quickRollFeedback = document.getElementById("quickRollFeedback");
+const ddbTrackingPanel = document.getElementById("ddbTrackingPanel");
+
+const ddbAutoTrackingCheckbox = document.getElementById(
+  "ddbAutoTrackingCheckbox",
+);
+
+const ddbTrackingStatus = document.getElementById("ddbTrackingStatus");
+
+const ddbLastRoll = document.getElementById("ddbLastRoll");
+
+const ddbLastRollResult = document.getElementById("ddbLastRollResult");
+
+const ddbLastRollAction = document.getElementById("ddbLastRollAction");
 
 let quickFeedbackTimeout = null;
+let ddbAutoTrackingEnabled =
+  localStorage.getItem("dndDdbAutoTracking") !== "false";
+
+let lastDdbRoll = loadLastDdbRoll();
 
 // =====================================================
 // EVENTS
@@ -315,6 +332,15 @@ googleSignInButton.addEventListener("click", signInHostWithGoogle);
 exportCampaignButton.addEventListener("click", exportCampaignBackup);
 document.addEventListener("keydown", handleTrackerShortcut);
 quickModeButton.addEventListener("click", toggleQuickMode);
+window.addEventListener("message", handleExtensionMessage);
+
+ddbAutoTrackingCheckbox.addEventListener("change", () => {
+  ddbAutoTrackingEnabled = ddbAutoTrackingCheckbox.checked;
+
+  localStorage.setItem("dndDdbAutoTracking", String(ddbAutoTrackingEnabled));
+
+  renderDdbTracking();
+});
 // =====================================================
 // AUTH
 // =====================================================
@@ -986,6 +1012,7 @@ function render() {
 
   renderCampaignPlayer();
   renderRollVisibility();
+  renderDdbTracking();
 }
 
 // =====================================================
@@ -2945,6 +2972,471 @@ function showRollFeedback(type) {
   quickFeedbackTimeout = setTimeout(() => {
     quickRollFeedback.classList.remove("show");
   }, 1500);
+}
+async function addDndBeyondRolls(ddbRoll) {
+  if (!activeSessionCode || sessionData?.status !== "active") {
+    console.log("DDB roll ignored: no active session.");
+
+    return;
+  }
+
+  const myPlayer = getMyPlayerEntry();
+
+  if (!myPlayer) {
+    console.log("DDB roll ignored: player is not in session.");
+
+    return;
+  }
+
+  const d20Results = ddbRoll?.d20Results;
+
+  if (!Array.isArray(d20Results) || d20Results.length === 0) {
+    return;
+  }
+
+  const validResults = d20Results.filter(
+    (value) => Number.isInteger(value) && value >= 1 && value <= 20,
+  );
+
+  if (validResults.length === 0) {
+    return;
+  }
+
+  const rollTypes = validResults.map((value) => {
+    if (value === 20) {
+      return "nat20";
+    }
+
+    if (value === 1) {
+      return "nat1";
+    }
+
+    return "normal";
+  });
+
+  const beforeAchievements = {
+    ...(sessionData?.players?.[myPlayer.id]?.achievements || {}),
+  };
+
+  const playerRef = ref(
+    db,
+    `sessions/${activeSessionCode}/players/${myPlayer.id}`,
+  );
+
+  try {
+    const result = await runTransaction(playerRef, (player) => {
+      if (!player) {
+        return player;
+      }
+
+      const nat20Count = rollTypes.filter((type) => type === "nat20").length;
+
+      const nat1Count = rollTypes.filter((type) => type === "nat1").length;
+
+      player.rolls = (player.rolls || 0) + rollTypes.length;
+
+      player.nat20 = (player.nat20 || 0) + nat20Count;
+
+      player.nat1 = (player.nat1 || 0) + nat1Count;
+
+      if (!Array.isArray(player.rollHistory)) {
+        player.rollHistory = [];
+      }
+
+      for (const type of rollTypes) {
+        player.rollHistory.push(type);
+      }
+
+      while (player.rollHistory.length > 20) {
+        player.rollHistory.shift();
+      }
+
+      if (!player.achievements) {
+        player.achievements = {};
+      }
+
+      if (player.nat20 >= 1) {
+        player.achievements.firstNat20 = true;
+      }
+
+      if (player.nat1 >= 3) {
+        player.achievements.cursed = true;
+      }
+
+      if (player.nat20 >= 5) {
+        player.achievements.blessed = true;
+      }
+
+      if (player.rolls >= 100) {
+        player.achievements.diceGoblin = true;
+      }
+
+      return player;
+    });
+
+    if (!result.committed) {
+      return;
+    }
+
+    const updatedPlayer = result.snapshot.val();
+
+    showDdbRollFeedback(ddbRoll, validResults);
+
+    const after = updatedPlayer.achievements || {};
+
+    if (after.firstNat20 && !beforeAchievements.firstNat20) {
+      showAchievementToast(
+        "⭐",
+        "First Blood",
+        `${updatedPlayer.name} rolled their first NAT20!`,
+      );
+    }
+
+    if (after.cursed && !beforeAchievements.cursed) {
+      showAchievementToast(
+        "💀",
+        "Cursed",
+        `${updatedPlayer.name} reached 3 NAT1 this session.`,
+      );
+    }
+
+    if (after.blessed && !beforeAchievements.blessed) {
+      showAchievementToast(
+        "🔥",
+        "Blessed by the Dice Gods",
+        `${updatedPlayer.name} reached 5 NAT20 this session.`,
+      );
+    }
+
+    if (after.diceGoblin && !beforeAchievements.diceGoblin) {
+      showAchievementToast(
+        "🎲",
+        "Dice Goblin",
+        `${updatedPlayer.name} made 100 rolls this session.`,
+      );
+    }
+
+    console.log("DDB roll saved:", {
+      rollId: ddbRoll.rollId,
+      action: ddbRoll.action,
+      results: validResults,
+      types: rollTypes,
+    });
+  } catch (error) {
+    console.error("DDB roll save error:", error);
+  }
+}
+async function handleExtensionMessage(event) {
+  if (!isExtensionMode) {
+    return;
+  }
+
+  if (event.source !== window.parent) {
+    return;
+  }
+
+  const validOrigin =
+    event.origin.startsWith("chrome-extension://") ||
+    event.origin.startsWith("opera-extension://");
+
+  if (!validOrigin) {
+    return;
+  }
+
+  const message = event.data;
+
+  if (
+    message?.source !== "dnd-roll-tracker-extension" ||
+    message?.type !== "DDB_ROLL_DETECTED"
+  ) {
+    return;
+  }
+
+  const ddbRoll = message.roll;
+
+  console.log("Tracker received DDB roll:", ddbRoll);
+
+  // Visada prisimenam paskutinį
+  // aptiktą DDB roll.
+  saveLastDdbRoll(ddbRoll);
+
+  if (!ddbAutoTrackingEnabled) {
+    showDdbTrackingDisabledFeedback(ddbRoll);
+
+    return;
+  }
+
+  await addDndBeyondRolls(ddbRoll);
+}
+async function addDndBeyondRolls(ddbRoll) {
+  if (!activeSessionCode || sessionData?.status !== "active") {
+    console.log("DDB roll ignored: no active session.");
+
+    return;
+  }
+
+  // SVARBU:
+  // naudojam būtent šito vartotojo playerį,
+  // o ne hosto Control Player dropdown.
+  const myPlayer = getMyPlayerEntry();
+
+  if (!myPlayer) {
+    console.log("DDB roll ignored: player is not in session.");
+
+    return;
+  }
+
+  const d20Results = ddbRoll?.d20Results;
+
+  if (!Array.isArray(d20Results) || d20Results.length === 0) {
+    return;
+  }
+
+  const validResults = d20Results.filter(
+    (value) => Number.isInteger(value) && value >= 1 && value <= 20,
+  );
+
+  if (validResults.length === 0) {
+    return;
+  }
+
+  const rollTypes = validResults.map((value) => {
+    if (value === 20) {
+      return "nat20";
+    }
+
+    if (value === 1) {
+      return "nat1";
+    }
+
+    return "normal";
+  });
+
+  const beforeAchievements = {
+    ...(sessionData?.players?.[myPlayer.id]?.achievements || {}),
+  };
+
+  const playerRef = ref(
+    db,
+    `sessions/${activeSessionCode}/players/${myPlayer.id}`,
+  );
+
+  try {
+    const result = await runTransaction(playerRef, (player) => {
+      if (!player) {
+        return player;
+      }
+
+      const nat20Count = rollTypes.filter((type) => type === "nat20").length;
+
+      const nat1Count = rollTypes.filter((type) => type === "nat1").length;
+
+      player.rolls = (player.rolls || 0) + rollTypes.length;
+
+      player.nat20 = (player.nat20 || 0) + nat20Count;
+
+      player.nat1 = (player.nat1 || 0) + nat1Count;
+
+      if (!Array.isArray(player.rollHistory)) {
+        player.rollHistory = [];
+      }
+
+      rollTypes.forEach((type) => {
+        player.rollHistory.push(type);
+      });
+
+      while (player.rollHistory.length > 20) {
+        player.rollHistory.shift();
+      }
+
+      if (!player.achievements) {
+        player.achievements = {};
+      }
+
+      if (player.nat20 >= 1) {
+        player.achievements.firstNat20 = true;
+      }
+
+      if (player.nat1 >= 3) {
+        player.achievements.cursed = true;
+      }
+
+      if (player.nat20 >= 5) {
+        player.achievements.blessed = true;
+      }
+
+      if (player.rolls >= 100) {
+        player.achievements.diceGoblin = true;
+      }
+
+      return player;
+    });
+
+    if (!result.committed) {
+      return;
+    }
+
+    const updatedPlayer = result.snapshot.val();
+
+    console.log("DDB roll saved to Firebase:", {
+      action: ddbRoll.action,
+      results: validResults,
+      types: rollTypes,
+    });
+
+    showDdbRollFeedback(ddbRoll, validResults);
+
+    // ACHIEVEMENTS
+    const after = updatedPlayer.achievements || {};
+
+    if (after.firstNat20 && !beforeAchievements.firstNat20) {
+      showAchievementToast(
+        "⭐",
+        "First Blood",
+        `${updatedPlayer.name} rolled their first NAT20!`,
+      );
+    }
+
+    if (after.cursed && !beforeAchievements.cursed) {
+      showAchievementToast(
+        "💀",
+        "Cursed",
+        `${updatedPlayer.name} reached 3 NAT1 this session.`,
+      );
+    }
+
+    if (after.blessed && !beforeAchievements.blessed) {
+      showAchievementToast(
+        "🔥",
+        "Blessed by the Dice Gods",
+        `${updatedPlayer.name} reached 5 NAT20 this session.`,
+      );
+    }
+
+    if (after.diceGoblin && !beforeAchievements.diceGoblin) {
+      showAchievementToast(
+        "🎲",
+        "Dice Goblin",
+        `${updatedPlayer.name} made 100 rolls this session.`,
+      );
+    }
+  } catch (error) {
+    console.error("DDB roll Firebase error:", error);
+  }
+}
+let ddbFeedbackTimeout = null;
+
+function showDdbRollFeedback(ddbRoll, results) {
+  if (!quickRollFeedback) {
+    return;
+  }
+
+  let icon = "🎲";
+
+  if (results.includes(20)) {
+    icon = "⭐";
+  } else if (results.includes(1)) {
+    icon = "💀";
+  }
+
+  const action = ddbRoll.action ? ` · ${ddbRoll.action}` : "";
+
+  quickRollFeedback.textContent = `${icon} DDB: ${results.join(", ")}${action}`;
+
+  quickRollFeedback.classList.add("show");
+
+  clearTimeout(ddbFeedbackTimeout);
+
+  ddbFeedbackTimeout = setTimeout(() => {
+    quickRollFeedback.classList.remove("show");
+  }, 2500);
+}
+function loadLastDdbRoll() {
+  try {
+    const value = localStorage.getItem("dndLastDdbRoll");
+
+    if (!value) {
+      return null;
+    }
+
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+}
+
+function saveLastDdbRoll(roll) {
+  lastDdbRoll = {
+    ...roll,
+    detectedAt: Date.now(),
+  };
+
+  localStorage.setItem("dndLastDdbRoll", JSON.stringify(lastDdbRoll));
+
+  renderDdbTracking();
+}
+function renderDdbTracking() {
+  const showPanel =
+    isExtensionMode && Boolean(activeSessionCode && sessionData);
+
+  ddbTrackingPanel.hidden = !showPanel;
+
+  if (!showPanel) {
+    return;
+  }
+
+  ddbAutoTrackingCheckbox.checked = ddbAutoTrackingEnabled;
+
+  ddbTrackingStatus.textContent = ddbAutoTrackingEnabled ? "ON" : "OFF";
+
+  ddbTrackingStatus.className = ddbAutoTrackingEnabled
+    ? "ddb-tracking-status enabled"
+    : "ddb-tracking-status disabled";
+
+  if (!lastDdbRoll) {
+    ddbLastRollResult.textContent = "No rolls detected yet";
+
+    ddbLastRollAction.textContent = "";
+
+    return;
+  }
+
+  const results = Array.isArray(lastDdbRoll.d20Results)
+    ? lastDdbRoll.d20Results
+    : [];
+
+  let icon = "🎲";
+
+  if (results.includes(20)) {
+    icon = "⭐";
+  } else if (results.includes(1)) {
+    icon = "💀";
+  }
+
+  ddbLastRollResult.textContent = `${icon} ${results.join(", ")}`;
+
+  if (lastDdbRoll.action) {
+    ddbLastRollAction.textContent = lastDdbRoll.action;
+  } else {
+    ddbLastRollAction.textContent = "Custom d20 roll";
+  }
+}
+function showDdbTrackingDisabledFeedback(ddbRoll) {
+  if (!quickRollFeedback) {
+    return;
+  }
+
+  const results = ddbRoll?.d20Results || [];
+
+  quickRollFeedback.textContent = `⚪ DDB: ${results.join(", ")} detected · Auto Tracking OFF`;
+
+  quickRollFeedback.classList.add("show");
+
+  clearTimeout(ddbFeedbackTimeout);
+
+  ddbFeedbackTimeout = setTimeout(() => {
+    quickRollFeedback.classList.remove("show");
+  }, 2500);
 }
 // =====================================================
 // START

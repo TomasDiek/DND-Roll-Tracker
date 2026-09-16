@@ -923,3 +923,57 @@ html.extension-mode.quick-mode header {
   opacity: 1;
   color: #22c55e;
 }
+.ddb-tracking-panel {
+  margin-bottom: 14px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #1f2937;
+  border: 1px solid #374151;
+}
+
+.ddb-tracking-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ddb-tracking-status {
+  margin-top: 3px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.ddb-tracking-status.enabled {
+  color: #22c55e;
+}
+
+.ddb-tracking-status.disabled {
+  color: #9ca3af;
+}
+
+.ddb-last-roll {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid #374151;
+}
+
+.ddb-last-roll-label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11px;
+  color: #9ca3af;
+  text-transform: uppercase;
+}
+
+.ddb-last-roll strong {
+  display: block;
+  font-size: 20px;
+}
+
+#ddbLastRollAction {
+  display: block;
+  margin-top: 3px;
+  font-size: 13px;
+  color: #d1d5db;
+}

@@ -332,6 +332,28 @@
             <option value="">Select player</option>
           </select>
         </div>
+        <div id="ddbTrackingPanel" class="ddb-tracking-panel" hidden>
+          <div class="ddb-tracking-header">
+            <div>
+              <strong>🎲 D&D Beyond Auto Tracking</strong>
+              <div id="ddbTrackingStatus" class="ddb-tracking-status">ON</div>
+            </div>
+
+            <label class="switch">
+              <input id="ddbAutoTrackingCheckbox" type="checkbox" />
+
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div id="ddbLastRoll" class="ddb-last-roll">
+            <span class="ddb-last-roll-label"> Last detected roll </span>
+
+            <strong id="ddbLastRollResult"> No rolls detected yet </strong>
+
+            <span id="ddbLastRollAction"></span>
+          </div>
+        </div>
         <div id="quickRollStats" class="quick-roll-stats" hidden>
           <div>
             <span>🎲 Rolls</span>
