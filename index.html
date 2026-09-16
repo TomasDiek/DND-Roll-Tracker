@@ -16,7 +16,7 @@
         <p>Track the luckiest and unluckiest adventurers.</p>
       </header>
       <div id="extensionToolbar" class="extension-toolbar" hidden>
-        <button id="quickModeButton" type="button">⚡ Quick Mode</button>
+        <button id="quickModeButton" type="button">⚡ 'Quick' Mode</button>
       </div>
 
       <!-- CAMPAIGN -->
@@ -332,7 +332,28 @@
             <option value="">Select player</option>
           </select>
         </div>
+        <div id="quickRollStats" class="quick-roll-stats" hidden>
+          <div>
+            <span>🎲 Rolls</span>
+            <strong id="quickRolls">0</strong>
+          </div>
 
+          <div>
+            <span>⭐ NAT20</span>
+            <strong id="quickNat20">0</strong>
+          </div>
+
+          <div>
+            <span>💀 NAT1</span>
+            <strong id="quickNat1">0</strong>
+          </div>
+        </div>
+
+        <div
+          id="quickRollFeedback"
+          class="quick-roll-feedback"
+          aria-live="polite"
+        ></div>
         <div class="roll-buttons">
           <button id="rollButton" class="roll normal">🎲 Roll</button>
 

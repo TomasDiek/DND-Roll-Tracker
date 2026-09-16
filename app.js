@@ -264,6 +264,17 @@ const achievementToastContainer = document.getElementById(
   "achievementToastContainer",
 );
 let quickModeEnabled = localStorage.getItem("dndQuickMode") === "true";
+const quickRollStats = document.getElementById("quickRollStats");
+
+const quickRolls = document.getElementById("quickRolls");
+
+const quickNat20 = document.getElementById("quickNat20");
+
+const quickNat1 = document.getElementById("quickNat1");
+
+const quickRollFeedback = document.getElementById("quickRollFeedback");
+
+let quickFeedbackTimeout = null;
 
 // =====================================================
 // EVENTS
@@ -474,7 +485,37 @@ async function joinSessionByCode(code) {
 
       return;
     }
+    const isHost = joiningSession.createdBy === currentUser.uid;
 
+    if (!isHost) {
+      const campaignPlayerEntry = getMyCampaignPlayerEntry();
+
+      if (!campaignPlayerEntry) {
+        alert("Select your campaign player first.");
+
+        return;
+      }
+
+      const campaignPlayerId = campaignPlayerEntry.id;
+
+      const campaignPlayer = campaignPlayerEntry.player;
+
+      const existingPlayer = joiningSession.players?.[campaignPlayerId];
+
+      if (!existingPlayer) {
+        await set(ref(db, `sessions/${code}/players/${campaignPlayerId}`), {
+          campaignPlayerId: campaignPlayerId,
+
+          name: campaignPlayer.name,
+
+          rolls: 0,
+          nat20: 0,
+          nat1: 0,
+
+          hideRolls: false,
+        });
+      }
+    }
     connectToSession(code);
   } catch (error) {
     console.error("Join session error:", error);
@@ -711,7 +752,7 @@ async function addRoll(type) {
     if (!result.committed) {
       return;
     }
-
+    showRollFeedback(type);
     const updatedPlayer = result.snapshot.val();
     const after = updatedPlayer.achievements || {};
 
@@ -938,7 +979,7 @@ function render() {
   }
 
   renderPlayerSelect();
-
+  renderQuickRollStats();
   renderLeaderboard();
 
   renderWinner();
@@ -2859,6 +2900,51 @@ function showAchievementToast(icon, title, description) {
   achievementToastContainer.appendChild(toast);
 
   setTimeout(() => toast.remove(), 5000);
+}
+function renderQuickRollStats() {
+  const enabled =
+    isExtensionMode &&
+    quickModeEnabled &&
+    activeSessionCode &&
+    sessionData?.status === "active";
+
+  quickRollStats.hidden = !enabled;
+
+  if (!enabled) {
+    return;
+  }
+
+  const playerId = getControlledPlayerId();
+
+  const player = sessionData?.players?.[playerId];
+
+  if (!player) {
+    quickRollStats.hidden = true;
+    return;
+  }
+
+  quickRolls.textContent = player.rolls || 0;
+
+  quickNat20.textContent = player.nat20 || 0;
+
+  quickNat1.textContent = player.nat1 || 0;
+}
+function showRollFeedback(type) {
+  const messages = {
+    normal: "✓ Roll added",
+    nat20: "⭐ NAT20 added!",
+    nat1: "💀 NAT1 added!",
+  };
+
+  quickRollFeedback.textContent = messages[type] || "✓ Added";
+
+  quickRollFeedback.classList.add("show");
+
+  clearTimeout(quickFeedbackTimeout);
+
+  quickFeedbackTimeout = setTimeout(() => {
+    quickRollFeedback.classList.remove("show");
+  }, 1500);
 }
 // =====================================================
 // START

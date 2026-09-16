@@ -1,3 +1,4 @@
+importScripts("background.js");
 chrome.sidePanel
   .setPanelBehavior({
     openPanelOnActionClick: true,
