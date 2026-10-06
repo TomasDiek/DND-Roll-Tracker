@@ -16,7 +16,11 @@
         <p>Track the luckiest and unluckiest adventurers.</p>
       </header>
       <div id="extensionToolbar" class="extension-toolbar" hidden>
-        <button id="quickModeButton" type="button">⚡ 'Quick' Mode</button>
+        <button id="quickModeButton" type="button">⚡ Quick Mode</button>
+
+        <button id="quickResourcesButton" type="button" hidden>
+          🎒 Resources
+        </button>
       </div>
 
       <!-- CAMPAIGN -->
@@ -286,7 +290,47 @@
           </div>
         </div>
       </section>
+      <!--Notes-->
+      <section id="partyResourcesCard" class="card party-resources-card" hidden>
+        <div class="resources-header">
+          <div>
+            <h2>🎒 Party Resources</h2>
+            <p class="resources-subtitle">
+              Shared resources for the whole campaign.
+            </p>
+          </div>
+        </div>
 
+        <div class="resources-table-header">
+          <span>Item</span>
+          <span>Amount</span>
+          <span></span>
+        </div>
+
+        <div id="partyResourcesList"></div>
+
+        <div class="resource-add-row">
+          <input
+            id="newResourceName"
+            type="text"
+            maxlength="50"
+            placeholder="Item..."
+          />
+
+          <input
+            id="newResourceAmount"
+            type="number"
+            min="0"
+            step="any"
+            value="0"
+            placeholder="Amount"
+          />
+
+          <button id="addResourceButton" type="button" class="secondary">
+            + Add
+          </button>
+        </div>
+      </section>
       <!-- PLAYER -->
       <section id="playerCard" class="card" hidden>
         <div id="playerRegistration">

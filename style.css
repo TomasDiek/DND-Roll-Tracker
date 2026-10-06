@@ -977,3 +977,487 @@ html.extension-mode.quick-mode header {
   font-size: 13px;
   color: #d1d5db;
 }
+/* =====================================================
+   PARTY RESOURCES
+   ===================================================== */
+
+.party-resources-card {
+  margin-top: 18px;
+  padding: 20px;
+
+  background: #1f2937;
+
+  border: 1px solid #2d3748;
+  border-radius: 16px;
+}
+
+/* =========================
+   HEADER
+   ========================= */
+
+.resources-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-bottom: 18px;
+}
+
+.resources-header h2 {
+  margin: 0;
+
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.resources-subtitle {
+  margin: 4px 0 0;
+
+  color: #94a3b8;
+
+  font-size: 13px;
+}
+
+/* =========================
+   COLUMN HEADER
+   ========================= */
+
+.resources-table-header {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr)
+    170px
+    42px;
+
+  gap: 10px;
+
+  margin-bottom: 6px;
+  padding: 0 10px;
+
+  color: #94a3b8;
+
+  font-size: 11px;
+  font-weight: 700;
+
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.resources-table-header span:nth-child(2) {
+  text-align: center;
+}
+
+/* =========================
+   RESOURCE ROW
+   ========================= */
+
+.resource-row {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr)
+    170px
+    42px;
+
+  align-items: center;
+
+  gap: 10px;
+
+  margin-bottom: 8px;
+  padding: 8px;
+
+  background: #182231;
+
+  border: 1px solid #2b384b;
+  border-radius: 12px;
+
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    transform 0.15s ease;
+}
+
+.resource-row:hover {
+  background: #1b2737;
+  border-color: #40516a;
+}
+
+/* =========================
+   INPUTS
+   ========================= */
+
+.resource-name-input,
+.resource-amount-input,
+.resource-add-row input {
+  box-sizing: border-box;
+
+  height: 40px;
+
+  padding: 0 12px;
+
+  color: #f8fafc;
+  background: #111827;
+
+  border: 1px solid #334155;
+  border-radius: 9px;
+
+  font: inherit;
+
+  outline: none;
+
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    background 0.15s ease;
+}
+
+.resource-name-input {
+  width: 100%;
+
+  font-weight: 600;
+}
+
+.resource-name-input:hover,
+.resource-amount-input:hover,
+.resource-add-row input:hover {
+  border-color: #475569;
+}
+
+.resource-name-input:focus,
+.resource-amount-input:focus,
+.resource-add-row input:focus {
+  background: #0f172a;
+
+  border-color: #6366f1;
+
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+/* =========================
+   AMOUNT CONTROL
+   ========================= */
+
+.resource-amount-control {
+  display: grid;
+
+  grid-template-columns:
+    38px
+    minmax(60px, 1fr)
+    38px;
+
+  align-items: center;
+
+  gap: 5px;
+}
+
+.resource-amount-input {
+  width: 100%;
+  height: 40px;
+
+  padding: 0 6px;
+
+  text-align: center;
+
+  font-weight: 700;
+
+  appearance: textfield;
+}
+
+/* Hide native number arrows */
+
+.resource-amount-input::-webkit-inner-spin-button,
+.resource-amount-input::-webkit-outer-spin-button,
+.resource-add-row input[type="number"]::-webkit-inner-spin-button,
+.resource-add-row input[type="number"]::-webkit-outer-spin-button {
+  margin: 0;
+
+  appearance: none;
+}
+
+/* =========================
+   + / -
+   ========================= */
+
+.resource-adjust-button {
+  width: 40px;
+  height: 40px;
+
+  padding: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: #e2e8f0;
+  background: #283548;
+
+  border: 1px solid #3b4a60;
+  border-radius: 9px;
+
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 800;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.1s ease;
+}
+
+.resource-adjust-button:hover {
+  background: #37465d;
+
+  border-color: #64748b;
+}
+
+.resource-adjust-button:active {
+  transform: scale(0.94);
+}
+
+/* =========================
+   DELETE
+   ========================= */
+
+.resource-delete-button {
+  width: 40px;
+  height: 40px;
+
+  padding: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.06);
+
+  border: 1px solid rgba(239, 68, 68, 0.18);
+  border-radius: 9px;
+
+  font-size: 18px;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.1s ease;
+}
+
+.resource-delete-button:hover {
+  color: #fecaca;
+
+  background: rgba(239, 68, 68, 0.14);
+
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.resource-delete-button:active {
+  transform: scale(0.95);
+}
+
+/* =========================
+   ADD RESOURCE
+   ========================= */
+
+.resource-add-row {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr)
+    110px
+    82px;
+
+  gap: 10px;
+
+  margin-top: 14px;
+  padding: 14px 8px 0;
+
+  border-top: 1px solid #334155;
+}
+
+.resource-add-row button {
+  height: 40px;
+
+  padding: 0 14px;
+
+  color: #ffffff;
+  background: #4f46e5;
+
+  border: 1px solid #6366f1;
+  border-radius: 9px;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    transform 0.1s ease;
+}
+
+.resource-add-row button:hover {
+  background: #6366f1;
+}
+
+.resource-add-row button:active {
+  transform: scale(0.97);
+}
+
+/* =========================
+   EMPTY STATE
+   ========================= */
+
+.resources-empty {
+  padding: 22px;
+
+  color: #94a3b8;
+  background: #182231;
+
+  border: 1px dashed #3b4a60;
+  border-radius: 12px;
+
+  text-align: center;
+
+  font-size: 13px;
+}
+
+/* =========================
+   MOBILE / NARROW PANEL
+   ========================= */
+
+@media (max-width: 600px) {
+  .party-resources-card {
+    padding: 15px;
+  }
+
+  .resources-table-header {
+    display: none;
+  }
+
+  .resource-row {
+    display: grid;
+
+    grid-template-columns:
+      minmax(0, 1fr)
+      190px
+      52px;
+
+    align-items: center;
+
+    gap: 10px;
+
+    margin-bottom: 8px;
+    padding: 8px;
+
+    background: #182231;
+
+    border: 1px solid #2b384b;
+    border-radius: 12px;
+
+    transition:
+      border-color 0.15s ease,
+      background 0.15s ease,
+      transform 0.15s ease;
+  }
+
+  .resource-name-input {
+    grid-column: 1;
+  }
+
+  .resource-amount-control {
+    display: grid;
+
+    grid-template-columns:
+      40px
+      minmax(70px, 1fr)
+      40px;
+
+    align-items: center;
+
+    gap: 6px;
+
+    height: 40px;
+  }
+
+  .resource-delete-button {
+    grid-column: 2;
+
+    grid-row: 1 / span 2;
+
+    width: 42px;
+    height: 100%;
+  }
+
+  .resource-add-row {
+    grid-template-columns:
+      minmax(0, 1fr)
+      90px;
+  }
+
+  .resource-add-row button {
+    grid-column: 1 / -1;
+  }
+}
+
+/* =========================================
+   QUICK MODE RESOURCES
+   ========================================= */
+
+html.extension-mode.quick-mode #partyResourcesCard {
+  display: none !important;
+}
+
+html.extension-mode.quick-mode.quick-resources-open #partyResourcesCard {
+  display: block !important;
+}
+
+/* Toolbar */
+
+.extension-toolbar {
+  display: flex;
+
+  gap: 8px;
+
+  margin-bottom: 10px;
+}
+
+.extension-toolbar button {
+  flex: 1;
+
+  width: auto;
+
+  margin: 0;
+}
+
+/* Compact resources in Quick Mode */
+
+html.extension-mode.quick-mode.quick-resources-open #partyResourcesCard {
+  margin-top: 0;
+  margin-bottom: 10px;
+
+  padding: 12px;
+}
+
+html.extension-mode.quick-mode.quick-resources-open
+  #partyResourcesCard
+  .resources-header {
+  margin-bottom: 12px;
+}
+
+html.extension-mode.quick-mode.quick-resources-open
+  #partyResourcesCard
+  .resources-header
+  h2 {
+  font-size: 18px;
+}
+
+html.extension-mode.quick-mode.quick-resources-open
+  #partyResourcesCard
+  .resources-subtitle {
+  display: none;
+}

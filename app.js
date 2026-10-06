@@ -260,10 +260,13 @@ const exportCampaignButton = document.getElementById("exportCampaignButton");
 const extensionToolbar = document.getElementById("extensionToolbar");
 
 const quickModeButton = document.getElementById("quickModeButton");
+const quickResourcesButton = document.getElementById("quickResourcesButton");
 const achievementToastContainer = document.getElementById(
   "achievementToastContainer",
 );
 let quickModeEnabled = localStorage.getItem("dndQuickMode") === "true";
+let quickResourcesOpen =
+  localStorage.getItem("dndQuickResourcesOpen") === "true";
 const quickRollStats = document.getElementById("quickRollStats");
 
 const quickRolls = document.getElementById("quickRolls");
@@ -292,7 +295,15 @@ let ddbAutoTrackingEnabled =
   localStorage.getItem("dndDdbAutoTracking") !== "false";
 
 let lastDdbRoll = loadLastDdbRoll();
+const partyResourcesCard = document.getElementById("partyResourcesCard");
 
+const partyResourcesList = document.getElementById("partyResourcesList");
+
+const newResourceName = document.getElementById("newResourceName");
+
+const newResourceAmount = document.getElementById("newResourceAmount");
+
+const addResourceButton = document.getElementById("addResourceButton");
 // =====================================================
 // EVENTS
 // =====================================================
@@ -333,13 +344,89 @@ exportCampaignButton.addEventListener("click", exportCampaignBackup);
 document.addEventListener("keydown", handleTrackerShortcut);
 quickModeButton.addEventListener("click", toggleQuickMode);
 window.addEventListener("message", handleExtensionMessage);
-
+quickResourcesButton.addEventListener("click", toggleQuickResources);
 ddbAutoTrackingCheckbox.addEventListener("change", () => {
   ddbAutoTrackingEnabled = ddbAutoTrackingCheckbox.checked;
 
   localStorage.setItem("dndDdbAutoTracking", String(ddbAutoTrackingEnabled));
 
   renderDdbTracking();
+});
+addResourceButton.addEventListener("click", addPartyResource);
+
+newResourceName.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    addPartyResource();
+  }
+});
+
+newResourceAmount.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    addPartyResource();
+  }
+});
+partyResourcesList.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-action]");
+
+  if (!button) {
+    return;
+  }
+
+  const row = button.closest(".resource-row");
+
+  if (!row) {
+    return;
+  }
+
+  const resourceId = row.dataset.resourceId;
+
+  const action = button.dataset.action;
+
+  if (action === "increase") {
+    await adjustPartyResource(resourceId, 1);
+  }
+
+  if (action === "decrease") {
+    await adjustPartyResource(resourceId, -1);
+  }
+
+  if (action === "delete") {
+    await deletePartyResource(resourceId);
+  }
+});
+partyResourcesList.addEventListener("change", async (event) => {
+  const input = event.target;
+
+  const row = input.closest(".resource-row");
+
+  if (!row) {
+    return;
+  }
+
+  const resourceId = row.dataset.resourceId;
+
+  const action = input.dataset.action;
+
+  if (action === "name") {
+    const name = input.value.trim();
+
+    if (!name) {
+      renderPartyResources();
+      return;
+    }
+
+    await updatePartyResourceField(resourceId, "name", name);
+  }
+
+  if (action === "amount") {
+    let amount = Number(input.value);
+
+    if (!Number.isFinite(amount) || amount < 0) {
+      amount = 0;
+    }
+
+    await updatePartyResourceField(resourceId, "amount", amount);
+  }
 });
 // =====================================================
 // AUTH
@@ -901,8 +988,10 @@ function render() {
   // =====================================
   // CAMPAIGN
   // =====================================
+
   renderHostAccount();
   applyQuickMode();
+
   const hasCampaign = Boolean(activeCampaignCode && campaignData);
 
   campaignSetup.hidden = hasCampaign;
@@ -912,6 +1001,10 @@ function render() {
   campaignPlayerCard.hidden = !hasCampaign;
 
   sessionCard.hidden = !hasCampaign;
+
+  // Party Resources priklauso Campaign,
+  // o ne Session.
+  renderPartyResources();
 
   if (!hasCampaign) {
     activeSession.hidden = true;
@@ -936,6 +1029,7 @@ function render() {
   activeCampaignCodeElement.textContent = activeCampaignCode;
 
   const isCampaignHost = campaignData.createdBy === currentUser.uid;
+
   exportCampaignButton.hidden = !isCampaignHost;
 
   createSessionArea.hidden = !isCampaignHost;
@@ -944,6 +1038,7 @@ function render() {
 
   renderCampaignPlayer();
   renderActiveSessions();
+
   allTimeCard.hidden = false;
 
   recordsCard.hidden = false;
@@ -967,12 +1062,12 @@ function render() {
   activeSession.hidden = !hasSession;
 
   leaderboardCard.hidden = !hasSession;
+
   activeSessionsArea.hidden = hasSession;
 
   if (!hasSession) {
     renderActiveSessions();
-  }
-  if (!hasSession) {
+
     playerCard.hidden = true;
 
     rollCard.hidden = true;
@@ -1005,13 +1100,17 @@ function render() {
   }
 
   renderPlayerSelect();
+
   renderQuickRollStats();
+
   renderLeaderboard();
 
   renderWinner();
 
   renderCampaignPlayer();
+
   renderRollVisibility();
+
   renderDdbTracking();
 }
 
@@ -1690,6 +1789,10 @@ function connectToCampaign(code) {
 
       campaignData = snapshot.val();
 
+      // Sukuriam memberUids indeksą
+      // seniems jau susietiems playeriams.
+      ensureCampaignMemberUidIndex();
+
       render();
     },
 
@@ -1833,14 +1936,21 @@ async function selectExistingCampaignPlayer() {
   }
 
   try {
-    // Susiejame naują Firebase anonymous UID
-    // su tuo pačiu Campaign Player.
+    // Susiejame Firebase UID
+    // su Campaign Player.
     await set(
       ref(
         db,
         `campaigns/${activeCampaignCode}/members/${campaignPlayerId}/linkedUids/${currentUser.uid}`,
       ),
       true,
+    );
+
+    // Greitas UID -> Campaign Player
+    // indeksas Firebase Rules.
+    await set(
+      ref(db, `campaigns/${activeCampaignCode}/memberUids/${currentUser.uid}`),
+      campaignPlayerId,
     );
 
     setMyCampaignPlayerId(campaignPlayerId);
@@ -2901,9 +3011,26 @@ function applyQuickMode() {
 
   document.documentElement.classList.toggle("quick-mode", enabled);
 
+  const resourcesOpen = enabled && quickResourcesOpen;
+
+  document.documentElement.classList.toggle(
+    "quick-resources-open",
+    resourcesOpen,
+  );
+
   extensionToolbar.hidden = !isExtensionMode || !hasSession;
 
   quickModeButton.textContent = enabled ? "↩ Full View" : "⚡ Quick Mode";
+
+  quickResourcesButton.hidden = !enabled;
+
+  if (enabled) {
+    const resourceCount = Object.keys(campaignData?.resources || {}).length;
+
+    quickResourcesButton.textContent = resourcesOpen
+      ? `🎒 Hide Resources (${resourceCount})`
+      : `🎒 Resources (${resourceCount})`;
+  }
 }
 function showAchievementToast(icon, title, description) {
   const toast = document.createElement("div");
@@ -3285,6 +3412,254 @@ function showDdbTrackingDisabledFeedback(ddbRoll) {
   ddbFeedbackTimeout = setTimeout(() => {
     quickRollFeedback.classList.remove("show");
   }, 2500);
+}
+function renderPartyResources() {
+  const hasCampaign = Boolean(activeCampaignCode && campaignData);
+
+  partyResourcesCard.hidden = !hasCampaign;
+
+  if (!hasCampaign) {
+    partyResourcesList.innerHTML = "";
+    return;
+  }
+
+  const resources = campaignData.resources || {};
+
+  const entries = Object.entries(resources);
+
+  if (entries.length === 0) {
+    partyResourcesList.innerHTML = `
+      <div class="resources-empty">
+        No shared resources yet.
+      </div>
+    `;
+
+    return;
+  }
+
+  entries.sort(([, a], [, b]) => (a.createdAt || 0) - (b.createdAt || 0));
+
+  partyResourcesList.innerHTML = entries
+    .map(
+      ([resourceId, resource]) => `
+          <div
+            class="resource-row"
+            data-resource-id="${escapeHtml(resourceId)}"
+          >
+            <input
+              class="resource-name-input"
+              type="text"
+              maxlength="50"
+              value="${escapeHtml(resource.name || "")}"
+              data-action="name"
+            />
+
+            <div class="resource-amount-control">
+              <button
+                type="button"
+                class="resource-adjust-button secondary"
+                data-action="decrease"
+                title="Decrease"
+              >
+                −
+              </button>
+
+              <input
+                class="resource-amount-input"
+                type="number"
+                min="0"
+                step="any"
+                value="${Number(resource.amount || 0)}"
+                data-action="amount"
+              />
+
+              <button
+                type="button"
+                class="resource-adjust-button secondary"
+                data-action="increase"
+                title="Increase"
+              >
+                +
+              </button>
+            </div>
+
+            <button
+              type="button"
+              class="resource-delete-button danger"
+              data-action="delete"
+              title="Delete resource"
+            >
+              🗑
+            </button>
+          </div>
+        `,
+    )
+    .join("");
+}
+async function addPartyResource() {
+  if (!activeCampaignCode) {
+    return;
+  }
+
+  const name = newResourceName.value.trim();
+
+  if (!name) {
+    alert("Enter resource name.");
+    newResourceName.focus();
+    return;
+  }
+
+  let amount = Number(newResourceAmount.value);
+
+  if (!Number.isFinite(amount) || amount < 0) {
+    amount = 0;
+  }
+
+  const resourcesRef = ref(db, `campaigns/${activeCampaignCode}/resources`);
+
+  const newResourceRef = push(resourcesRef);
+
+  try {
+    await set(newResourceRef, {
+      name,
+      amount,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+
+    newResourceName.value = "";
+    newResourceAmount.value = "0";
+
+    newResourceName.focus();
+  } catch (error) {
+    console.error("Failed to add party resource:", error);
+
+    alert("Could not add resource.");
+  }
+}
+async function adjustPartyResource(resourceId, change) {
+  if (!activeCampaignCode || !resourceId) {
+    return;
+  }
+
+  const amountRef = ref(
+    db,
+    `campaigns/${activeCampaignCode}/resources/${resourceId}/amount`,
+  );
+
+  try {
+    await runTransaction(amountRef, (currentAmount) => {
+      const amount = Number(currentAmount) || 0;
+
+      return Math.max(0, amount + change);
+    });
+
+    await set(
+      ref(
+        db,
+        `campaigns/${activeCampaignCode}/resources/${resourceId}/updatedAt`,
+      ),
+      Date.now(),
+    );
+  } catch (error) {
+    console.error("Failed to adjust resource:", error);
+  }
+}
+async function updatePartyResourceField(resourceId, field, value) {
+  if (!activeCampaignCode || !resourceId) {
+    return;
+  }
+
+  const updates = {
+    [`campaigns/${activeCampaignCode}/resources/${resourceId}/${field}`]: value,
+
+    [`campaigns/${activeCampaignCode}/resources/${resourceId}/updatedAt`]:
+      Date.now(),
+  };
+
+  try {
+    await update(ref(db), updates);
+  } catch (error) {
+    console.error("Failed to update resource:", error);
+  }
+}
+async function deletePartyResource(resourceId) {
+  if (!activeCampaignCode || !resourceId) {
+    return;
+  }
+
+  const resource = campaignData?.resources?.[resourceId];
+
+  if (!resource) {
+    return;
+  }
+
+  const confirmed = confirm(`Delete "${resource.name}"?`);
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    await set(
+      ref(db, `campaigns/${activeCampaignCode}/resources/${resourceId}`),
+      null,
+    );
+  } catch (error) {
+    console.error("Failed to delete resource:", error);
+  }
+}
+async function ensureCampaignMemberUidIndex() {
+  if (!activeCampaignCode || !campaignData || !currentUser) {
+    return;
+  }
+
+  const playerEntry = getMyCampaignPlayerEntry();
+
+  if (!playerEntry) {
+    return;
+  }
+
+  const playerId = playerEntry.id;
+
+  const player = playerEntry.player;
+
+  if (player?.linkedUids?.[currentUser.uid] !== true) {
+    return;
+  }
+
+  if (campaignData?.memberUids?.[currentUser.uid] === playerId) {
+    return;
+  }
+
+  try {
+    await set(
+      ref(db, `campaigns/${activeCampaignCode}/memberUids/${currentUser.uid}`),
+      playerId,
+    );
+  } catch (error) {
+    console.error("Failed to create campaign UID index:", error);
+  }
+}
+function toggleQuickResources() {
+  if (!isExtensionMode || !quickModeEnabled) {
+    return;
+  }
+
+  quickResourcesOpen = !quickResourcesOpen;
+
+  localStorage.setItem("dndQuickResourcesOpen", String(quickResourcesOpen));
+
+  applyQuickMode();
+
+  if (quickResourcesOpen && partyResourcesCard) {
+    requestAnimationFrame(() => {
+      partyResourcesCard.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  }
 }
 // =====================================================
 // START
