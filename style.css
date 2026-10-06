@@ -1461,3 +1461,129 @@ html.extension-mode.quick-mode.quick-resources-open
   .resources-subtitle {
   display: none;
 }
+/* =====================================================
+   PARTY RESOURCES - NARROW EXTENSION
+   ===================================================== */
+
+@media (max-width: 560px) {
+  html.extension-mode .party-resources-card {
+    padding: 12px;
+  }
+
+  html.extension-mode .resources-table-header {
+    display: none;
+  }
+
+  html.extension-mode .resource-row {
+    display: grid;
+
+    grid-template-columns:
+      minmax(0, 1fr)
+      44px;
+
+    gap: 8px;
+
+    width: 100%;
+    min-width: 0;
+
+    padding: 8px;
+
+    box-sizing: border-box;
+  }
+
+  /* Item name */
+
+  html.extension-mode .resource-name-input {
+    grid-column: 1;
+    grid-row: 1;
+
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Trash */
+
+  html.extension-mode .resource-delete-button {
+    grid-column: 2;
+    grid-row: 1;
+
+    width: 44px;
+    height: 40px;
+
+    font-size: 18px;
+  }
+
+  /* Amount row */
+
+  html.extension-mode .resource-amount-control {
+    grid-column: 1 / -1;
+    grid-row: 2;
+
+    display: grid;
+
+    grid-template-columns:
+      44px
+      minmax(0, 1fr)
+      44px;
+
+    gap: 8px;
+
+    width: 100%;
+    min-width: 0;
+
+    height: 40px;
+  }
+
+  html.extension-mode .resource-adjust-button {
+    width: 44px;
+    height: 40px;
+
+    min-width: 0;
+  }
+
+  html.extension-mode .resource-amount-input {
+    width: 100%;
+    min-width: 0;
+    height: 40px;
+
+    box-sizing: border-box;
+  }
+
+  /* Add resource */
+
+  html.extension-mode .resource-add-row {
+    display: grid;
+
+    grid-template-columns:
+      minmax(0, 1fr)
+      90px;
+
+    gap: 8px;
+
+    width: 100%;
+    min-width: 0;
+
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  html.extension-mode .resource-add-row input {
+    min-width: 0;
+  }
+
+  html.extension-mode .resource-add-row button {
+    grid-column: 1 / -1;
+
+    width: 100%;
+  }
+}
+html.extension-mode,
+html.extension-mode body {
+  overflow-x: hidden;
+}
+
+html.extension-mode .container,
+html.extension-mode .card {
+  min-width: 0;
+  box-sizing: border-box;
+}
